@@ -5,7 +5,8 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+# Remove existing package-lock.json to allow fresh install with new dependencies
+RUN rm -f package-lock.json && npm install
 
 # Build the application
 FROM base AS builder
@@ -24,7 +25,8 @@ RUN apk add --no-cache wget
 
 # Prod deps only
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+# Remove existing package-lock.json to allow fresh install with new dependencies
+RUN rm -f package-lock.json && npm install --only=production && npm cache clean --force
 
 # Built application
 COPY --from=builder /app/dist ./dist
