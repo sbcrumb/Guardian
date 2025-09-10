@@ -538,7 +538,7 @@ export class ConfigService {
     
     // Convert key-value pairs to object
     settings.forEach(setting => {
-      let value = setting.value;
+      let value: any = setting.value;
       // Convert based on type
       if (setting.type === 'boolean') {
         value = value === 'true';
