@@ -119,9 +119,8 @@ export class ConfigService {
   }
 
   async getAllSettings(): Promise<AppSettings[]> {
-    return this.settingsRepository.find({
-      order: { key: 'ASC' },
-    });
+    const settings = await this.settingsRepository.find();
+    return settings;
   }
 
   async getPublicSettings(): Promise<Omit<AppSettings, 'value'>[]> {

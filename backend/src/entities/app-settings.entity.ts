@@ -22,9 +22,4 @@ export class AppSettings {
 
   @Column({ name: 'updated_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
-
-  // Notification settings - these are handled as key-value pairs
-  // notificationsEnabled -> stored as key: 'notificationsEnabled'
-  // notificationUrls -> stored as key: 'notificationUrls' 
-  // notificationTitle -> stored as key: 'notificationTitle'
 }
