@@ -13,11 +13,15 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { ConfigService, ConfigSettingDto } from './services/config.service';
+import { ConfigService } from './services/config.service';
+import { NotificationService } from '../../services/notification.service';
 
 @Controller('config')
 export class ConfigController {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   @Get()
   async getAllSettings() {
@@ -184,11 +188,7 @@ export class ConfigController {
     try {
       const notificationUrls = JSON.parse(body.notificationUrls || '[]');
       
-      // Use eval to avoid TypeScript compilation issues
-      const { NotificationService } = eval('require')('../../../services/notification.service');
-      const notificationService = new NotificationService();
-      
-      const success = await notificationService.testNotification(
+      const success = await this.notificationService.testNotification(
         notificationUrls,
         body.notificationTitle || 'Guardian - Test Notification'
       );
