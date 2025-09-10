@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { UsersService } from '../../users/services/users.service';
+import { NotificationService } from '../../../services/notification.service';
+import { ConfigService } from '../../config/services/config.service';
 import {
   PlexSession,
   DeviceInfo,
@@ -17,6 +19,8 @@ export class DeviceTrackingService {
     @InjectRepository(UserDevice)
     private userDeviceRepository: Repository<UserDevice>,
     private usersService: UsersService,
+    private notificationService: NotificationService,
+    private configService: ConfigService,
   ) {}
 
   async processSessionsForDeviceTracking(
@@ -164,6 +168,11 @@ export class DeviceTrackingService {
     this.logger.warn(
       `🚨 NEW DEVICE DETECTED! User: ${deviceInfo.username || deviceInfo.userId}, Device: ${deviceInfo.deviceName || deviceInfo.deviceIdentifier}, Platform: ${deviceInfo.devicePlatform || 'Unknown'}, Status: ${defaultBlock ? 'PENDING' : 'APPROVED'} (User preference: ${defaultBlock ? 'Block' : 'Allow'})`,
     );
+
+    // Send notification if device is pending and notifications are enabled
+    if (defaultBlock) {
+      await this.sendDeviceAuthorizationNotification(deviceInfo);
+    }
   }
 
   async getAllDevices(): Promise<UserDevice[]> {
@@ -219,5 +228,43 @@ export class DeviceTrackingService {
   async deleteDevice(deviceId: number): Promise<void> {
     await this.userDeviceRepository.delete(deviceId);
     this.logger.log(`Device ${deviceId} has been rejected and deleted`);
+  }
+
+  private async sendDeviceAuthorizationNotification(deviceInfo: DeviceInfo): Promise<void> {
+    try {
+      const settings = await this.configService.getSettings();
+      
+      if (!settings.notificationsEnabled || !settings.notificationUrls) {
+        this.logger.debug('Notifications disabled or no notification URLs configured');
+        return;
+      }
+
+      let notificationUrls: string[] = [];
+      try {
+        notificationUrls = JSON.parse(settings.notificationUrls);
+      } catch (error) {
+        this.logger.error('Failed to parse notification URLs:', error);
+        return;
+      }
+
+      if (notificationUrls.length === 0) {
+        this.logger.debug('No notification URLs configured');
+        return;
+      }
+
+      const success = await this.notificationService.sendDeviceAuthorizationNotification(
+        deviceInfo,
+        notificationUrls,
+        settings.notificationTitle
+      );
+
+      if (success) {
+        this.logger.log(`Device authorization notification sent for device: ${deviceInfo.deviceIdentifier}`);
+      } else {
+        this.logger.warn(`Failed to send device authorization notification for device: ${deviceInfo.deviceIdentifier}`);
+      }
+    } catch (error) {
+      this.logger.error('Error sending device authorization notification:', error);
+    }
   }
 }

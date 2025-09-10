@@ -22,4 +22,17 @@ export class AppSettings {
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
+
+  @Column({ name: 'plex_token', nullable: true })
+  plexToken?: string;
+
+  // Notification settings
+  @Column({ name: 'notifications_enabled', default: false })
+  notificationsEnabled: boolean;
+
+  @Column({ name: 'notification_urls', nullable: true, type: 'text' })
+  notificationUrls?: string; // JSON string of Apprise URLs
+
+  @Column({ name: 'notification_title', default: 'Guardian - Device Authorization Required' })
+  notificationTitle: string;
 }
