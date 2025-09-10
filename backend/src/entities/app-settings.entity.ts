@@ -8,11 +8,11 @@ export class AppSettings {
   @Column({ unique: true })
   key: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column()
   value: string;
 
   @Column({ nullable: true })
-  description: string;
+  description?: string;
 
   @Column({ default: 'string' })
   type: 'string' | 'number' | 'boolean' | 'json';
@@ -20,19 +20,11 @@ export class AppSettings {
   @Column({ default: false })
   private: boolean;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ name: 'updated_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
 
-  @Column({ name: 'plex_token', nullable: true })
-  plexToken?: string;
-
-  // Notification settings
-  @Column({ name: 'notifications_enabled', default: false })
-  notificationsEnabled: boolean;
-
-  @Column({ name: 'notification_urls', nullable: true, type: 'text' })
-  notificationUrls?: string; // JSON string of Apprise URLs
-
-  @Column({ name: 'notification_title', default: 'Guardian - Device Authorization Required' })
-  notificationTitle: string;
+  // Notification settings - these are handled as key-value pairs
+  // notificationsEnabled -> stored as key: 'notificationsEnabled'
+  // notificationUrls -> stored as key: 'notificationUrls' 
+  // notificationTitle -> stored as key: 'notificationTitle'
 }

@@ -66,7 +66,7 @@ export class ConfigController {
   }
 
   @Put()
-  async updateMultipleSettings(@Body() settings: ConfigSettingDto[]) {
+  async updateMultipleSettings(@Body() settings: any[]) {
     try {
       const updated = await this.configService.updateMultipleSettings(settings);
       return {

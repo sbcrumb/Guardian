@@ -136,7 +136,6 @@ export class ConfigService {
       type: setting.type,
       private: setting.private,
       updatedAt: setting.updatedAt,
-      value: setting.private ? '••••••••' : setting.value,
     }));
   }
 
@@ -535,8 +534,28 @@ export class ConfigService {
   }
 
   async getSettings(): Promise<any> {
-    const settings = await this.settingsRepository.findOne({ where: { id: 1 } });
-    return settings || {};
+    const settings = await this.settingsRepository.find();
+    const result: any = {};
+    
+    // Convert key-value pairs to object
+    settings.forEach(setting => {
+      let value = setting.value;
+      // Convert based on type
+      if (setting.type === 'boolean') {
+        value = value === 'true';
+      } else if (setting.type === 'number') {
+        value = Number(value);
+      } else if (setting.type === 'json') {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          value = setting.value;
+        }
+      }
+      result[setting.key] = value;
+    });
+    
+    return result;
   }
 
   async updateNotificationSettings(settings: {
@@ -544,22 +563,59 @@ export class ConfigService {
     notificationUrls?: string;
     notificationTitle?: string;
   }): Promise<void> {
-    let existingSettings = await this.settingsRepository.findOne({ where: { id: 1 } });
+    interface SettingUpdate {
+      key: string;
+      value: string;
+      type: 'string' | 'boolean';
+      description: string;
+    }
     
-    if (!existingSettings) {
-      existingSettings = this.settingsRepository.create({ id: 1 });
-    }
-
+    const updates: SettingUpdate[] = [];
+    
     if (settings.notificationsEnabled !== undefined) {
-      existingSettings.notificationsEnabled = settings.notificationsEnabled;
+      updates.push({
+        key: 'notificationsEnabled',
+        value: String(settings.notificationsEnabled),
+        type: 'boolean',
+        description: 'Enable or disable notifications for new device authorizations'
+      });
     }
+    
     if (settings.notificationUrls !== undefined) {
-      existingSettings.notificationUrls = settings.notificationUrls;
+      updates.push({
+        key: 'notificationUrls',
+        value: settings.notificationUrls,
+        type: 'string',
+        description: 'JSON array of notification URLs (Discord, Slack, etc.)'
+      });
     }
+    
     if (settings.notificationTitle !== undefined) {
-      existingSettings.notificationTitle = settings.notificationTitle;
+      updates.push({
+        key: 'notificationTitle',
+        value: settings.notificationTitle,
+        type: 'string',
+        description: 'Title for device authorization notifications'
+      });
     }
 
-    await this.settingsRepository.save(existingSettings);
+    for (const update of updates) {
+      let setting = await this.settingsRepository.findOne({ where: { key: update.key } });
+      
+      if (setting) {
+        setting.value = update.value;
+        setting.updatedAt = new Date();
+      } else {
+        setting = this.settingsRepository.create({
+          key: update.key,
+          value: update.value,
+          type: update.type,
+          description: update.description,
+          private: false
+        });
+      }
+      
+      await this.settingsRepository.save(setting);
+    }
   }
 }
