@@ -151,4 +151,57 @@ export class ConfigController {
       );
     }
   }
+
+  @Post('notifications')
+  async updateNotificationSettings(@Body() body: {
+    notificationsEnabled?: boolean;
+    notificationUrls?: string;
+    notificationTitle?: string;
+  }): Promise<{ message: string }> {
+    await this.configService.updateNotificationSettings(body);
+    return { message: 'Notification settings updated successfully' };
+  }
+
+  @Get('notifications')
+  async getNotificationSettings(): Promise<{
+    notificationsEnabled: boolean;
+    notificationUrls?: string;
+    notificationTitle: string;
+  }> {
+    const settings = await this.configService.getSettings();
+    return {
+      notificationsEnabled: settings.notificationsEnabled || false,
+      notificationUrls: settings.notificationUrls || '',
+      notificationTitle: settings.notificationTitle || 'Guardian - Device Authorization Required',
+    };
+  }
+
+  @Post('notifications/test')
+  async testNotifications(@Body() body: {
+    notificationUrls: string;
+    notificationTitle?: string;
+  }): Promise<{ message: string; success: boolean }> {
+    try {
+      const notificationUrls = JSON.parse(body.notificationUrls || '[]');
+      
+      // Use eval to avoid TypeScript compilation issues
+      const { NotificationService } = eval('require')('../../../services/notification.service');
+      const notificationService = new NotificationService();
+      
+      const success = await notificationService.testNotification(
+        notificationUrls,
+        body.notificationTitle || 'Guardian - Test Notification'
+      );
+
+      return {
+        message: success ? 'Test notification sent successfully' : 'Failed to send test notification',
+        success
+      };
+    } catch (error) {
+      return {
+        message: `Error sending test notification: ${(error as Error).message}`,
+        success: false
+      };
+    }
+  }
 }

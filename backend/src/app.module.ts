@@ -7,6 +7,7 @@ import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { ConfigModule } from './modules/config/config.module';
 import { SchedulerService } from './services/scheduler.service';
+import { NotificationService } from './services/notification.service';
 import { UserDevice } from './entities/user-device.entity';
 import { ActiveSession } from './entities/active-session.entity';
 import { UserPreference } from './entities/user-preference.entity';
@@ -32,6 +33,6 @@ import * as path from 'path';
     UsersModule,
     ConfigModule,
   ],
-  providers: [SchedulerService],
+  providers: [SchedulerService, NotificationService],
 })
 export class AppModule {}

@@ -533,4 +533,33 @@ export class ConfigService {
       throw new Error(`Failed to import database: ${error.message}`);
     }
   }
+
+  async getSettings(): Promise<any> {
+    const settings = await this.settingsRepository.findOne({ where: { id: 1 } });
+    return settings || {};
+  }
+
+  async updateNotificationSettings(settings: {
+    notificationsEnabled?: boolean;
+    notificationUrls?: string;
+    notificationTitle?: string;
+  }): Promise<void> {
+    let existingSettings = await this.settingsRepository.findOne({ where: { id: 1 } });
+    
+    if (!existingSettings) {
+      existingSettings = this.settingsRepository.create({ id: 1 });
+    }
+
+    if (settings.notificationsEnabled !== undefined) {
+      existingSettings.notificationsEnabled = settings.notificationsEnabled;
+    }
+    if (settings.notificationUrls !== undefined) {
+      existingSettings.notificationUrls = settings.notificationUrls;
+    }
+    if (settings.notificationTitle !== undefined) {
+      existingSettings.notificationTitle = settings.notificationTitle;
+    }
+
+    await this.settingsRepository.save(existingSettings);
+  }
 }
