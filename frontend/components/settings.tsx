@@ -76,8 +76,9 @@ export default function Settings({ onBack }: SettingsProps) {
 
   // Track unsaved changes
   useEffect(() => {
-    if (settings && settings.length > 0) {
-      const hasChanges = settings.some((setting) => {
+    if (settings && Object.keys(formData).length > 0) {
+      // Check for changes in existing settings
+      const hasExistingChanges = settings.some((setting) => {
         const currentValue = formData[setting.key];
         if (currentValue === undefined) return false;
 
@@ -89,7 +90,19 @@ export default function Settings({ onBack }: SettingsProps) {
 
         return normalizeValue(currentValue) !== normalizeValue(setting.value);
       });
-      setHasUnsavedChanges(hasChanges);
+
+      // Check for new settings that don't exist in database yet
+      const hasNewSettings = Object.keys(formData).some((key) => {
+        const existingSetting = settings.find(s => s.key === key);
+        if (!existingSetting) {
+          // This is a new setting, consider it a change if it has a non-empty value
+          const value = formData[key];
+          return value !== undefined && value !== "" && value !== "false";
+        }
+        return false;
+      });
+
+      setHasUnsavedChanges(hasExistingChanges || hasNewSettings);
     }
   }, [formData, settings]);
 

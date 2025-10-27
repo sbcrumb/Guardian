@@ -58,9 +58,9 @@ export interface ErrorDisplayConfig {
 // Map error codes to display configurations
 export const ERROR_DISPLAY_CONFIG: Record<PlexErrorCode, ErrorDisplayConfig> = {
   [PlexErrorCode.NOT_CONFIGURED]: {
-    title: "Plex Configuration Required",
+    title: "Media Server Configuration Required",
     description:
-      "Guardian needs to connect to your Plex Media Server to monitor streams and manage devices.",
+      "Guardian needs to connect to your media server to monitor streams and manage devices.",
     iconName: "Server",
     iconColor: "text-amber-600 dark:text-amber-400",
     iconBg: "bg-amber-100 dark:bg-amber-900/20",
