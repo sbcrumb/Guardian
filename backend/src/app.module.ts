@@ -4,6 +4,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { PlexModule } from './modules/plex/plex.module';
+import { JellyfinModule } from './modules/jellyfin/jellyfin.module';
+import { MediaServerModule } from './modules/media-server/media-server.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { ConfigModule } from './modules/config/config.module';
@@ -43,6 +45,8 @@ import * as path from 'path';
     SessionsModule,
     DevicesModule,
     PlexModule,
+    JellyfinModule,
+    MediaServerModule,
     HealthModule,
     UsersModule,
     ConfigModule,

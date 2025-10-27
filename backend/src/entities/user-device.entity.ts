@@ -64,4 +64,7 @@ export class UserDevice {
 
   @Column({ name: 'temporary_access_duration_minutes', nullable: true })
   temporaryAccessDurationMinutes: number;
+
+  @Column({ name: 'server_type', default: 'plex' })
+  serverType: 'plex' | 'jellyfin' | 'emby';
 }

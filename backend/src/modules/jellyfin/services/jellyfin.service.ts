@@ -1,21 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PlexClient } from './plex-client';
-import { SessionTerminationService } from './session-termination.service';
-import { PlexSessionsResponse } from '../../../types/plex.types';
+import { JellyfinClient } from './jellyfin-client';
+import { SessionTerminationService } from '../../plex/services/session-termination.service';
+import { SessionsResponse } from '../../../interfaces/media-server.interface';
 import { DeviceTrackingService } from '../../devices/services/device-tracking.service';
 import { ActiveSessionService } from '../../sessions/services/active-session.service';
 import { ConfigService } from '../../config/services/config.service';
 import { config } from '../../../config/app.config';
-import { IMediaServerService, SessionsResponse } from '../../../interfaces/media-server.interface';
+import { IMediaServerService } from '../../../interfaces/media-server.interface';
 
 @Injectable()
-export class PlexService implements IMediaServerService {
-  private readonly logger = new Logger(PlexService.name);
+export class JellyfinService implements IMediaServerService {
+  private readonly logger = new Logger(JellyfinService.name);
   private serverIdentifierCache: string | null = null;
   private serverIdentifierPromise: Promise<string | null> | null = null;
 
   constructor(
-    private readonly plexClient: PlexClient,
+    private readonly jellyfinClient: JellyfinClient,
     private readonly sessionTerminationService: SessionTerminationService,
     private readonly deviceTrackingService: DeviceTrackingService,
     private readonly activeSessionService: ActiveSessionService,
@@ -34,7 +34,7 @@ export class PlexService implements IMediaServerService {
     }
 
     // Create new request and cache the promise
-    this.serverIdentifierPromise = this.plexClient
+    this.serverIdentifierPromise = this.jellyfinClient
       .getServerIdentity()
       .then((identifier) => {
         this.serverIdentifierCache = identifier;
@@ -53,7 +53,7 @@ export class PlexService implements IMediaServerService {
   async getActiveSessions(): Promise<SessionsResponse> {
     try {
       const [sessions, serverIdentifier] = await Promise.all([
-        this.plexClient.getSessions(),
+        this.jellyfinClient.getSessions(),
         this.getServerIdentifier(),
       ]);
 
@@ -115,23 +115,24 @@ export class PlexService implements IMediaServerService {
   private buildMediaUrl(type: 'thumb' | 'art', mediaPath: string): string {
     if (!mediaPath) return '';
 
-    // Parse the media path to extract ratingKey and timestamp
-    const pathMatch = mediaPath.match(
-      /\/library\/metadata\/(\d+)\/(thumb|art)(?:\/(\d+))?/,
-    );
+    // For Jellyfin, the media path might be like /Items/{id}/Images/Primary or /Items/{id}/Images/Backdrop/0
+    const pathMatch = mediaPath.match(/\/Items\/([^\/]+)\/Images\/(Primary|Backdrop)(?:\/(\d+))?/);
 
     if (!pathMatch) {
-      this.logger.warn(`Invalid media path format: ${mediaPath}`);
+      this.logger.warn(`Invalid Jellyfin media path format: ${mediaPath}`);
       return '';
     }
 
-    const [, ratingKey, , timestamp] = pathMatch;
+    const [, itemId, imageType, imageIndex] = pathMatch;
 
+    // Map Jellyfin image types to our types
+    const mappedType = imageType === 'Primary' ? 'thumb' : 'art';
+    
     // Build the proxy URL that points to our media controller
-    let proxyUrl = `${config.api.baseUrl}/plex/media/${type}/${ratingKey}`;
-
-    if (timestamp) {
-      proxyUrl += `?t=${timestamp}`;
+    let proxyUrl = `${config.api.baseUrl}/jellyfin/media/${mappedType}/${itemId}`;
+    
+    if (imageIndex) {
+      proxyUrl += `?index=${imageIndex}`;
     }
 
     return proxyUrl;
@@ -140,26 +141,26 @@ export class PlexService implements IMediaServerService {
   async getServerWebUrl(): Promise<string> {
     try {
       // Check for custom URL first
-      const customUrl = await this.configService.getSetting('CUSTOM_PLEX_URL');
+      const customUrl = await this.configService.getSetting('CUSTOM_JELLYFIN_URL');
       if (customUrl && customUrl.trim()) {
         return customUrl.trim();
       }
 
       // Build URL from server configuration
       const [ip, port, useSSL] = await Promise.all([
-        this.configService.getSetting('PLEX_SERVER_IP'),
-        this.configService.getSetting('PLEX_SERVER_PORT'),
+        this.configService.getSetting('JELLYFIN_SERVER_IP'),
+        this.configService.getSetting('JELLYFIN_SERVER_PORT'),
         this.configService.getSetting('USE_SSL'),
       ]);
 
       if (!ip || !port) {
-        throw new Error('Plex server IP and port not configured');
+        throw new Error('Jellyfin server IP and port not configured');
       }
 
       const protocol = useSSL === 'true' || useSSL === true ? 'https' : 'http';
       return `${protocol}://${ip}:${port}`;
     } catch (error) {
-      this.logger.error('Error getting Plex web URL:', error);
+      this.logger.error('Error getting Jellyfin web URL:', error);
       throw error;
     }
   }
@@ -167,8 +168,6 @@ export class PlexService implements IMediaServerService {
   async updateActiveSessions(): Promise<SessionsResponse> {
     try {
       const sessions = await this.getActiveSessions();
-
-      // this.logger.debug(JSON.stringify(sessions));
 
       // Update active sessions in database
       try {

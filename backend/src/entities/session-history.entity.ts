@@ -110,4 +110,7 @@ export class SessionHistory {
 
   @Column({ name: 'parent_rating_key', nullable: true })
   parentRatingKey: string;
+
+  @Column({ name: 'server_type', default: 'plex' })
+  serverType: 'plex' | 'jellyfin' | 'emby';
 }

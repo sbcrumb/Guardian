@@ -2,23 +2,15 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
 import { ConfigService } from '../../config/services/config.service';
-import {
-  PlexErrorCode,
-  PlexResponse,
-  createPlexError,
-  createPlexSuccess,
-} from '../../../types/plex-errors';
 import { IMediaServerClient, ConnectionResponse } from '../../../interfaces/media-server.interface';
-
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SessionHistory } from '../../../entities/session-history.entity';
-
 import { UserDevice } from '../../../entities/user-device.entity';
 
 @Injectable()
-export class PlexClient implements IMediaServerClient {
-  private readonly logger = new Logger(PlexClient.name);
+export class JellyfinClient implements IMediaServerClient {
+  private readonly logger = new Logger(JellyfinClient.name);
 
   constructor(
     @Inject(forwardRef(() => ConfigService))
@@ -31,9 +23,9 @@ export class PlexClient implements IMediaServerClient {
 
   private async getConfig() {
     const [ip, port, token, useSSL, ignoreCertErrors] = await Promise.all([
-      this.configService.getSetting('PLEX_SERVER_IP'),
-      this.configService.getSetting('PLEX_SERVER_PORT'),
-      this.configService.getSetting('PLEX_TOKEN'),
+      this.configService.getSetting('JELLYFIN_SERVER_IP'),
+      this.configService.getSetting('JELLYFIN_SERVER_PORT'),
+      this.configService.getSetting('JELLYFIN_API_KEY'),
       this.configService.getSetting('USE_SSL'),
       this.configService.getSetting('IGNORE_CERT_ERRORS'),
     ]);
@@ -52,7 +44,7 @@ export class PlexClient implements IMediaServerClient {
 
     if (!ip || !port || !token) {
       throw new Error(
-        'Missing required Plex configuration. Please configure PLEX_SERVER_IP, PLEX_SERVER_PORT, and PLEX_TOKEN in settings.',
+        'Missing required Jellyfin configuration. Please configure JELLYFIN_SERVER_IP, JELLYFIN_SERVER_PORT, and JELLYFIN_API_KEY in settings.',
       );
     }
   }
@@ -66,21 +58,15 @@ export class PlexClient implements IMediaServerClient {
     } = {},
   ): Promise<any> {
     await this.validateConfiguration();
-    const { ip, port, token, useSSL, ignoreCertErrors } =
-      await this.getConfig();
+    const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
 
     return new Promise((resolve, reject) => {
       const cleanEndpoint = endpoint.startsWith('/')
         ? endpoint.slice(1)
         : endpoint;
-      const hasQuery = cleanEndpoint.includes('?');
-      const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
-      const fullEndpoint = hasQuery
-        ? `${cleanEndpoint}&${tokenParam}`
-        : `${cleanEndpoint}?${tokenParam}`;
-
-      const fullUrl = `${baseUrl}/${fullEndpoint}`;
+      
+      const fullUrl = `${baseUrl}/${cleanEndpoint}`;
       const urlObj = new URL(fullUrl);
 
       const requestOptions = {
@@ -90,13 +76,15 @@ export class PlexClient implements IMediaServerClient {
         method: options.method || 'GET',
         headers: {
           Accept: 'application/json',
-          'X-Plex-Client-Identifier': 'Guardian',
+          'X-Emby-Client': 'Guardian',
+          'X-Emby-Client-Version': '1.0.0',
+          'X-Emby-Device-Id': 'guardian-device',
+          'X-Emby-Device-Name': 'Guardian',
+          'Authorization': `MediaBrowser Token=${token}`,
           ...options.headers,
         },
         rejectUnauthorized: !ignoreCertErrors,
       };
-
-      // this.logger.debug(`Making request to: ${fullUrl}`);
 
       const httpModule = useSSL ? https : http;
 
@@ -140,7 +128,6 @@ export class PlexClient implements IMediaServerClient {
         reject(error);
       });
 
-      // Set timeout
       req.setTimeout(15000, () => {
         req.destroy();
         reject(new Error('Request timeout'));
@@ -156,21 +143,15 @@ export class PlexClient implements IMediaServerClient {
 
   async requestMedia(endpoint: string): Promise<Buffer | null> {
     await this.validateConfiguration();
-    const { ip, port, token, useSSL, ignoreCertErrors } =
-      await this.getConfig();
+    const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
 
     return new Promise((resolve, reject) => {
       const cleanEndpoint = endpoint.startsWith('/')
         ? endpoint.slice(1)
         : endpoint;
-      const hasQuery = cleanEndpoint.includes('?');
-      const tokenParam = `X-Plex-Token=${encodeURIComponent(token)}`;
-      const fullEndpoint = hasQuery
-        ? `${cleanEndpoint}&${tokenParam}`
-        : `${cleanEndpoint}?${tokenParam}`;
-
-      const fullUrl = `${baseUrl}/${fullEndpoint}`;
+      
+      const fullUrl = `${baseUrl}/${cleanEndpoint}`;
       const urlObj = new URL(fullUrl);
 
       const requestOptions = {
@@ -179,7 +160,8 @@ export class PlexClient implements IMediaServerClient {
         path: urlObj.pathname + urlObj.search,
         method: 'GET',
         headers: {
-          'X-Plex-Client-Identifier': 'Guardian',
+          'X-Emby-Client': 'Guardian',
+          'Authorization': `MediaBrowser Token=${token}`,
         },
         rejectUnauthorized: !ignoreCertErrors,
       };
@@ -223,9 +205,9 @@ export class PlexClient implements IMediaServerClient {
 
   async getServerIdentity(): Promise<string | null> {
     try {
-      const response = await this.request('/');
+      const response = await this.request('System/Info');
       const data = await response.json();
-      return data?.MediaContainer?.machineIdentifier || null;
+      return data?.Id || null;
     } catch (error) {
       this.logger.error('Error getting server identity:', error);
       return null;
@@ -233,136 +215,102 @@ export class PlexClient implements IMediaServerClient {
   }
 
   async getSessions(): Promise<any> {
-    const response = await this.request('status/sessions');
-    return response.json();
-  }
+    const response = await this.request('Sessions');
+    const sessions = await response.json();
+    
+    // Transform Jellyfin sessions to match Plex structure
+    const transformedSessions = {
+      MediaContainer: {
+        size: sessions.length || 0,
+        Metadata: sessions.map((session: any) => ({
+          sessionKey: session.Id,
+          User: {
+            id: session.UserId,
+            uuid: session.UserId,
+            title: session.UserName,
+            thumb: session.UserPrimaryImageTag ? `/Users/${session.UserId}/Images/Primary` : undefined,
+          },
+          Player: {
+            machineIdentifier: session.DeviceId,
+            platform: session.Client,
+            platformVersion: session.ApplicationVersion,
+            product: session.Client,
+            title: session.DeviceName,
+            version: session.ApplicationVersion,
+            device: session.DeviceName,
+            userAgent: session.Client,
+            address: session.RemoteEndPoint?.split(':')[0],
+            state: session.PlayState?.IsPaused ? 'paused' : 'playing',
+          },
+          Session: {
+            id: session.Id,
+            bandwidth: session.TranscodingInfo?.Bitrate,
+            location: session.IsLocal ? 'lan' : 'wan',
+          },
+          Media: session.TranscodingInfo ? [{
+            videoResolution: session.TranscodingInfo.VideoCodec,
+            bitrate: session.TranscodingInfo.Bitrate,
+            container: session.TranscodingInfo.Container,
+            videoCodec: session.TranscodingInfo.VideoCodec,
+            audioCodec: session.TranscodingInfo.AudioCodec,
+          }] : [],
+          title: session.NowPlayingItem?.Name,
+          grandparentTitle: session.NowPlayingItem?.SeriesName,
+          parentTitle: session.NowPlayingItem?.SeasonName,
+          year: session.NowPlayingItem?.ProductionYear,
+          duration: session.NowPlayingItem?.RunTimeTicks ? Math.floor(session.NowPlayingItem.RunTimeTicks / 10000) : undefined,
+          viewOffset: session.PlayState?.PositionTicks ? Math.floor(session.PlayState.PositionTicks / 10000) : undefined,
+          type: session.NowPlayingItem?.Type,
+          thumb: session.NowPlayingItem?.ImageTags?.Primary ? `/Items/${session.NowPlayingItem.Id}/Images/Primary` : undefined,
+          art: session.NowPlayingItem?.BackdropImageTags?.[0] ? `/Items/${session.NowPlayingItem.Id}/Images/Backdrop/0` : undefined,
+        })),
+      },
+    };
 
-  private async externalRequest(
-    url: string,
-    options: {
-      method?: string;
-      body?: string;
-      headers?: Record<string, string>;
-    } = {},
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const urlObj = new URL(url);
-
-      const requestOptions = {
-        hostname: urlObj.hostname,
-        port: urlObj.port || 443,
-        path: urlObj.pathname + urlObj.search,
-        method: options.method || 'GET',
-        headers: {
-          Accept: 'application/json',
-          'X-Plex-Client-Identifier': 'Guardian',
-          ...options.headers,
-        },
-      };
-
-      const req = https.request(requestOptions, (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            try {
-              const jsonData = data ? JSON.parse(data) : {};
-              resolve({
-                ok: true,
-                status: res.statusCode,
-                json: () => jsonData,
-                text: () => data,
-              });
-            } catch (parseError) {
-              resolve({
-                ok: true,
-                status: res.statusCode,
-                json: () => ({}),
-                text: () => data,
-              });
-            }
-          } else {
-            const error = new Error(
-              `HTTP ${res.statusCode}: ${res.statusMessage} - ${data}`,
-            );
-            this.logger.error(`External request failed for ${url}:`, error);
-            reject(error);
-          }
-        });
-      });
-
-      req.on('error', (error) => {
-        this.logger.error(`External request failed for ${url}:`, error);
-        reject(error);
-      });
-
-      req.setTimeout(15000, () => {
-        req.destroy();
-        reject(new Error('External request timeout'));
-      });
-
-      if (options.body) {
-        req.write(options.body);
-      }
-
-      req.end();
-    });
+    return transformedSessions;
   }
 
   async getUsers(): Promise<any> {
     try {
-      const { token } = await this.getConfig();
-
-      if (!token) {
-        throw new Error('Plex token is required to fetch users');
-      }
-
-      const url = `https://plex.tv/api/users?X-Plex-Token=${encodeURIComponent(token)}`;
-
-      this.logger.debug('Fetching Plex users from Plex.tv API');
-
-      const response = await this.externalRequest(url);
-
-      const responseText = response.text();
-      this.logger.debug('Successfully fetched Plex users');
-      return responseText;
+      const response = await this.request('Users');
+      return await response.text();
     } catch (error) {
-      this.logger.error('Error in getPlexUsers:', error);
+      this.logger.error('Error in getUsers:', error);
       throw error;
     }
   }
 
   async terminateSession(
-    deviceIdentifier: string,
+    sessionId: string,
     reason: string = 'Session terminated',
   ): Promise<void> {
-    if (!deviceIdentifier) {
-      this.logger.warn('No device identifier provided for termination');
+    if (!sessionId) {
+      this.logger.warn('No session ID provided for termination');
       return;
     }
 
-    const params = new URLSearchParams({
-      sessionId: deviceIdentifier,
-      reason: reason,
-    });
+    try {
+      await this.request(`Sessions/${sessionId}/Playing/Stop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ Reason: reason }),
+      });
 
-    await this.request(`status/sessions/terminate?${params.toString()}`, {
-      method: 'GET',
-    });
-
-    this.logger.log(
-      `Terminate session requested to Plex for ${deviceIdentifier}`,
-    );
+      this.logger.log(
+        `Terminate session requested to Jellyfin for ${sessionId}`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to terminate session ${sessionId}:`, error);
+      throw error;
+    }
   }
 
   async testConnection(): Promise<ConnectionResponse> {
     try {
       await this.validateConfiguration();
-      const response = await this.request('/');
+      const response = await this.request('System/Info');
 
       if (response.ok) {
         return {
@@ -372,7 +320,7 @@ export class PlexClient implements IMediaServerClient {
       } else {
         return {
           success: false,
-          message: `Plex server returned error: ${response.status}`,
+          message: `Jellyfin server returned error: ${response.status}`,
           code: `HTTP ${response.status}`,
         };
       }
@@ -398,17 +346,17 @@ export class PlexClient implements IMediaServerClient {
         };
       }
 
-      // Handle connection refused/unreachable - normalize EHOSTUNREACH to same as ECONNREFUSED
+      // Handle connection refused/unreachable
       if (error.code === 'ECONNREFUSED' || error.code === 'EHOSTUNREACH') {
         return {
           success: false,
-          message: 'Plex server is unreachable',
+          message: 'Jellyfin server is unreachable',
           code: 'CONNECTION_REFUSED',
-          suggestion: 'Check if Plex server is running and accessible',
+          suggestion: 'Check if Jellyfin server is running and accessible',
         };
       }
 
-      // Handle timeout errors - normalize all timeout types
+      // Handle timeout errors
       if (
         error.code === 'ECONNRESET' ||
         error.code === 'ETIMEDOUT' ||
@@ -432,7 +380,7 @@ export class PlexClient implements IMediaServerClient {
           success: false,
           message: 'Authentication failed',
           code: 'AUTH_FAILED',
-          suggestion: 'Check your Plex token',
+          suggestion: 'Check your Jellyfin API key',
         };
       }
 

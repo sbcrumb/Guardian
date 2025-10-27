@@ -39,7 +39,7 @@ import { useSettings } from "@/contexts/settings-context";
 import { useVersion } from "@/contexts/version-context";
 import { config } from "@/lib/config";
 
-import { PlexSettings } from "./settings/PlexSettings";
+import { MediaServerSettings } from "./settings/MediaServerSettings";
 import { SMTPSettings } from "./settings/SMTPSettings";
 import { AppriseSettings } from "./settings/AppriseSettings";
 import { DatabaseManagement } from "./settings/DatabaseManagement";
@@ -61,7 +61,7 @@ export default function Settings({ onBack }: SettingsProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  const [activeTab, setActiveTab] = useState("plex");
+  const [activeTab, setActiveTab] = useState("media-server");
 
   // Initialize form data when settings load
   useEffect(() => {
@@ -221,7 +221,7 @@ export default function Settings({ onBack }: SettingsProps) {
 
   const getTabIcon = (tabId: string) => {
     switch (tabId) {
-      case "plex":
+      case "media-server":
         return Server;
       case "smtp":
         return Mail;
@@ -264,10 +264,10 @@ export default function Settings({ onBack }: SettingsProps) {
 
   const tabs = [
     {
-      id: "plex",
-      label: "Plex Integration",
+      id: "media-server",
+      label: "Media Server",
       description:
-        "Configure your Plex Media Server connection and related settings",
+        "Configure your media server connection and related settings",
     },
     {
       id: "guardian",
@@ -400,8 +400,8 @@ export default function Settings({ onBack }: SettingsProps) {
           {tabs.map((tab) => (
             <TabsContent key={tab.id} value={tab.id} className="space-y-6">
               {/* Render the appropriate component for each tab */}
-              {tab.id === "plex" && (
-                <PlexSettings
+              {tab.id === "media-server" && (
+                <MediaServerSettings
                   settings={settings}
                   formData={formData}
                   onFormDataChange={handleFormDataChange}
