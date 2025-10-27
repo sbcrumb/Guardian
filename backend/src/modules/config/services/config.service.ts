@@ -373,7 +373,7 @@ export class ConfigService {
     return value;
   }
 
-  async updateSetting(key: string, value: any): Promise<AppSettings> {
+  async updateSetting(key: string, value: any, type?: 'string' | 'number' | 'boolean' | 'json'): Promise<AppSettings> {
     // Validate DEVICE_CLEANUP_INTERVAL_DAYS setting
     if (key === 'DEVICE_CLEANUP_INTERVAL_DAYS') {
       const numValue = Number(value);
@@ -444,9 +444,15 @@ export class ConfigService {
       stringValue = String(value);
     }
 
-    const setting = await this.settingsRepository.findOne({ where: { key } });
+    let setting = await this.settingsRepository.findOne({ where: { key } });
+    
     if (!setting) {
-      throw new Error(`Setting ${key} not found`);
+      // Create new setting if it doesn't exist
+      this.logger.debug(`Creating new setting: ${key}`);
+      setting = new AppSettings();
+      setting.key = key;
+      setting.type = type || 'string'; // Use provided type or default to string
+      setting.private = false;
     }
 
     setting.value = stringValue;
@@ -498,10 +504,10 @@ export class ConfigService {
   ): Promise<AppSettings[]> {
     const results: AppSettings[] = [];
 
-    for (const { key, value } of settings) {
+    for (const { key, value, type } of settings) {
       try {
         // Each updateSetting call will handle config change notifications
-        const updated = await this.updateSetting(key, value);
+        const updated = await this.updateSetting(key, value, type);
         results.push(updated);
       } catch (error) {
         this.logger.error(`Failed to update setting ${key}:`, error);
