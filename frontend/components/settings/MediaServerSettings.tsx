@@ -23,7 +23,6 @@ import {
 import { config } from "@/lib/config";
 import { AppSetting } from "@/types";
 import {
-  getSettingInfo,
   SettingsFormData,
   ConnectionStatus,
 } from "./settings-utils";
@@ -269,7 +268,7 @@ export function MediaServerSettings({
             id={`server-ip-${serverType}`}
             type="text"
             placeholder="192.168.1.100"
-            value={getSettingInfo(settings, settingKeys.ip)?.value || ""}
+            value={settings.find(s => s.key === settingKeys.ip)?.value || ""}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.ip]: e.target.value,
@@ -285,7 +284,7 @@ export function MediaServerSettings({
             id={`server-port-${serverType}`}
             type="text"
             placeholder={serverType === 'plex' ? '32400' : '8096'}
-            value={getSettingInfo(settings, settingKeys.port)?.value || ""}
+            value={settings.find(s => s.key === settingKeys.port)?.value || ""}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.port]: e.target.value,
@@ -301,7 +300,7 @@ export function MediaServerSettings({
             id={`server-token-${serverType}`}
             type="password"
             placeholder={getTokenPlaceholder(serverType)}
-            value={getSettingInfo(settings, settingKeys.token)?.value || ""}
+            value={settings.find(s => s.key === settingKeys.token)?.value || ""}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.token]: e.target.value,
@@ -320,7 +319,7 @@ export function MediaServerSettings({
               </p>
             </div>
             <Switch
-              checked={getSettingInfo(settings, "USE_SSL")?.value === "true"}
+              checked={settings.find(s => s.key === "USE_SSL")?.value === "true"}
               onCheckedChange={(checked) =>
                 onFormDataChange({
                   USE_SSL: checked.toString(),
@@ -337,7 +336,7 @@ export function MediaServerSettings({
               </p>
             </div>
             <Switch
-              checked={getSettingInfo(settings, "IGNORE_CERT_ERRORS")?.value === "true"}
+              checked={settings.find(s => s.key === "IGNORE_CERT_ERRORS")?.value === "true"}
               onCheckedChange={(checked) =>
                 onFormDataChange({
                   IGNORE_CERT_ERRORS: checked.toString(),
@@ -356,7 +355,7 @@ export function MediaServerSettings({
             id={`custom-url-${serverType}`}
             type="url"
             placeholder={`https://your${serverType}server.example.com`}
-            value={getSettingInfo(settings, settingKeys.customUrl)?.value || ""}
+            value={settings.find(s => s.key === settingKeys.customUrl)?.value || ""}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.customUrl]: e.target.value,
