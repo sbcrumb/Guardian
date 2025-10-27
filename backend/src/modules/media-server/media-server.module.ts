@@ -17,9 +17,9 @@ import { UserPreference } from '../../entities/user-preference.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserDevice, SessionHistory, UserPreference]),
-    forwardRef(() => PlexModule),
-    forwardRef(() => JellyfinModule),
-    forwardRef(() => ConfigModule),
+    PlexModule,
+    JellyfinModule,
+    ConfigModule,
     forwardRef(() => DevicesModule),
     forwardRef(() => SessionsModule),
     forwardRef(() => UsersModule),
