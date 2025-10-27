@@ -30,6 +30,8 @@ export class JellyfinClient implements IMediaServerClient {
       this.configService.getSetting('IGNORE_CERT_ERRORS'),
     ]);
 
+    this.logger.debug(`Raw config values: ip=${ip}, port=${port}, token=${token ? '[REDACTED]' : 'null'}, useSSL=${useSSL}, ignoreCertErrors=${ignoreCertErrors}`);
+
     return {
       ip: ip as string,
       port: port as string,
@@ -60,6 +62,8 @@ export class JellyfinClient implements IMediaServerClient {
     await this.validateConfiguration();
     const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
+    
+    this.logger.debug(`Request config: ip=${ip}, port=${port}, useSSL=${useSSL}, baseUrl=${baseUrl}`);
 
     return new Promise((resolve, reject) => {
       const cleanEndpoint = endpoint.startsWith('/')
