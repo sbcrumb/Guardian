@@ -65,15 +65,24 @@ export function MediaServerSettings({
   const { toast } = useToast();
 
   useEffect(() => {
+    // Initialize server type from form data or settings
+    const savedServerType = formData['MEDIA_SERVER_TYPE'] || 
+                           settings.find(s => s.key === 'MEDIA_SERVER_TYPE')?.value ||
+                           'plex';
+    setServerType(savedServerType as MediaServerType);
+    
     fetchServerInfo();
-  }, []);
+  }, [settings, formData]);
 
   const fetchServerInfo = async () => {
     try {
       const response = await fetch(`${config.api.baseUrl}/media-server/info`);
       if (response.ok) {
         const info = await response.json();
-        setServerType(info.serverType);
+        // Only update if we don't already have it set from form/settings
+        if (!formData['MEDIA_SERVER_TYPE'] && !settings.find(s => s.key === 'MEDIA_SERVER_TYPE')) {
+          setServerType(info.serverType);
+        }
         setServerInfo(info.config);
       }
     } catch (error) {
@@ -250,9 +259,12 @@ export function MediaServerSettings({
             value={serverType} 
             onValueChange={(value: MediaServerType) => {
               setServerType(value);
+              // Save the server type immediately
               onFormDataChange({
                 MEDIA_SERVER_TYPE: value,
               });
+              // Clear connection status when switching server types
+              setConnectionStatus(null);
             }}
           >
             <SelectTrigger>

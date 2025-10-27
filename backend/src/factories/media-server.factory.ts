@@ -19,9 +19,11 @@ export class MediaServerFactory {
   ) {}
 
   async getServerType(): Promise<MediaServerType> {
-    const serverType = process.env.MEDIA_SERVER_TYPE || 
-                      await this.configService.getSetting('MEDIA_SERVER_TYPE') || 
-                      'plex';
+    const envServerType = process.env.MEDIA_SERVER_TYPE;
+    const dbServerType = await this.configService.getSetting('MEDIA_SERVER_TYPE');
+    const serverType = envServerType || dbServerType || 'plex';
+    
+    this.logger.debug(`Server type resolution: env=${envServerType}, db=${dbServerType}, final=${serverType}`);
     
     if (!['plex', 'jellyfin', 'emby'].includes(serverType)) {
       this.logger.warn(`Invalid server type: ${serverType}, defaulting to plex`);
