@@ -165,8 +165,8 @@ export default function Settings({ onBack }: SettingsProps) {
     setIsSaving(true);
 
     try {
-      // Prepare the data to send
-      const changedSettings = settings
+      // Prepare the data to send - include both changed existing settings and new settings
+      const changedExistingSettings = settings
         ?.filter((setting) => {
           const newValue = formData[setting.key];
           return newValue !== undefined && newValue !== setting.value;
@@ -175,9 +175,28 @@ export default function Settings({ onBack }: SettingsProps) {
           key: setting.key,
           value: String(formData[setting.key]),
           type: setting.type,
+        })) || [];
+
+      // Add new settings that don't exist in the database yet
+      const newSettings = Object.keys(formData)
+        .filter((key) => {
+          const existingSetting = settings?.find(s => s.key === key);
+          if (!existingSetting) {
+            // This is a new setting, include it if it has a non-empty value
+            const value = formData[key];
+            return value !== undefined && value !== "" && value !== "false";
+          }
+          return false;
+        })
+        .map((key) => ({
+          key,
+          value: String(formData[key]),
+          type: typeof formData[key] === 'boolean' ? 'boolean' : 'string',
         }));
 
-      if (!changedSettings || changedSettings.length === 0) {
+      const allSettingsToSave = [...changedExistingSettings, ...newSettings];
+
+      if (allSettingsToSave.length === 0) {
         toast({
           title: "No Changes",
           description: "There are no changes to save.",
@@ -190,7 +209,7 @@ export default function Settings({ onBack }: SettingsProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(changedSettings),
+        body: JSON.stringify(allSettingsToSave),
       });
 
       if (!response.ok) {
