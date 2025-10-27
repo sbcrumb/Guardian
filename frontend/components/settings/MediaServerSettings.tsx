@@ -71,7 +71,7 @@ export function MediaServerSettings({
 
   const fetchServerInfo = async () => {
     try {
-      const response = await fetch(`${config.API_BASE_URL}/media-server/info`);
+      const response = await fetch(`${config.api.baseUrl}/media-server/info`);
       if (response.ok) {
         const info = await response.json();
         setServerType(info.serverType);
@@ -163,7 +163,7 @@ export function MediaServerSettings({
     setConnectionStatus(null);
 
     try {
-      const response = await fetch(`${config.API_BASE_URL}/media-server/test-connection`);
+      const response = await fetch(`${config.api.baseUrl}/media-server/test-connection`);
 
       if (!response.ok) {
         const errorData = await response.json();
