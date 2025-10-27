@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { ConfigService } from '../modules/config/services/config.service';
 import { IMediaServerClient, IMediaServerService, MediaServerType } from '../interfaces/media-server.interface';
 import { PlexClient } from '../modules/plex/services/plex-client';
@@ -12,10 +13,7 @@ export class MediaServerFactory {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly plexClient: PlexClient,
-    private readonly plexService: PlexService,
-    private readonly jellyfinClient: JellyfinClient,
-    private readonly jellyfinService: JellyfinService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async getServerType(): Promise<MediaServerType> {
@@ -39,10 +37,10 @@ export class MediaServerFactory {
     switch (serverType) {
       case 'jellyfin':
         this.logger.debug('Using Jellyfin client');
-        return this.jellyfinClient;
+        return this.moduleRef.get(JellyfinClient);
       case 'plex':
         this.logger.debug('Using Plex client');
-        return this.plexClient;
+        return this.moduleRef.get(PlexClient);
       case 'emby':
         // TODO: Implement Emby client
         throw new Error('Emby support not yet implemented');
@@ -57,10 +55,10 @@ export class MediaServerFactory {
     switch (serverType) {
       case 'jellyfin':
         this.logger.debug('Using Jellyfin service');
-        return this.jellyfinService;
+        return this.moduleRef.get(JellyfinService);
       case 'plex':
         this.logger.debug('Using Plex service');
-        return this.plexService;
+        return this.moduleRef.get(PlexService);
       case 'emby':
         // TODO: Implement Emby service
         throw new Error('Emby support not yet implemented');
