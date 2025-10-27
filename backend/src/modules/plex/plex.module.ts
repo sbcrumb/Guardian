@@ -2,7 +2,6 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlexService } from './services/plex.service';
 import { PlexClient } from './services/plex-client';
-import { SessionTerminationService } from './services/session-termination.service';
 import { UserDevice } from '../../entities/user-device.entity';
 import { SessionHistory } from '../../entities/session-history.entity';
 import { UserPreference } from '../../entities/user-preference.entity';
@@ -12,7 +11,6 @@ import { UsersModule } from '../users/users.module';
 import { ConfigModule } from '../config/config.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PlexController } from './controllers/plex.controller';
-import { MediaServerModule } from '../media-server/media-server.module';
 
 @Module({
   imports: [
@@ -22,10 +20,9 @@ import { MediaServerModule } from '../media-server/media-server.module';
     forwardRef(() => UsersModule),
     ConfigModule,
     forwardRef(() => NotificationsModule),
-    MediaServerModule,
   ],
   controllers: [PlexController],
-  providers: [PlexService, PlexClient, SessionTerminationService],
-  exports: [PlexService, PlexClient, SessionTerminationService],
+  providers: [PlexService, PlexClient],
+  exports: [PlexService, PlexClient],
 })
 export class PlexModule {}

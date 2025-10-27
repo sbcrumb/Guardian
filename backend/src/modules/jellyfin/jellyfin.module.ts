@@ -6,7 +6,7 @@ import { JellyfinClient } from './services/jellyfin-client';
 import { ConfigModule } from '../config/config.module';
 import { DevicesModule } from '../devices/devices.module';
 import { SessionsModule } from '../sessions/sessions.module';
-import { PlexModule } from '../plex/plex.module'; // For session termination service
+import { MediaServerModule } from '../media-server/media-server.module'; // For session termination service
 import { SessionHistory } from '../../entities/session-history.entity';
 import { UserDevice } from '../../entities/user-device.entity';
 
@@ -16,7 +16,7 @@ import { UserDevice } from '../../entities/user-device.entity';
     forwardRef(() => ConfigModule),
     forwardRef(() => DevicesModule),
     forwardRef(() => SessionsModule),
-    forwardRef(() => PlexModule), // For SessionTerminationService
+    forwardRef(() => MediaServerModule), // For SessionTerminationService
   ],
   controllers: [JellyfinController],
   providers: [JellyfinService, JellyfinClient],
