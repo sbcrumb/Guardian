@@ -55,7 +55,7 @@ export class PlexController {
   @Get('web-url')
   async getPlexWebUrl() {
     try {
-      const webUrl = await this.plexService.getPlexWebUrl();
+      const webUrl = await this.plexService.getServerWebUrl();
       return { webUrl };
     } catch (error) {
       this.logger.error('Failed to get Plex web URL:', error);

@@ -263,7 +263,7 @@ export class UsersService {
       this.logger.log('Starting Plex users sync from Plex.tv API...');
 
       // Fetch users from Plex.tv
-      const response = await this.plexClient.getPlexUsers();
+      const response = await this.plexClient.getUsers();
 
       if (!response) {
         this.logger.warn('No users data received from Plex.tv API');
