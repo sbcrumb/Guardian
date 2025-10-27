@@ -149,7 +149,7 @@ export class MediaServerController {
         this.mediaServerFactory.getMediaServerConfig(),
       ]);
 
-      let serverId = null;
+      let serverId: string | null = null;
       
       // Only try to get server identity if the server is configured
       if (config.serverIp && config.serverPort && config.token) {
