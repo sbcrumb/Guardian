@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { UserDevice } from '../../../entities/user-device.entity';
 import { SessionHistory } from '../../../entities/session-history.entity';
 import { UserPreference } from '../../../entities/user-preference.entity';
-import { PlexClient } from './plex-client';
+import { MediaServerFactory } from '../../../factories/media-server.factory';
 import { UsersService } from '../../users/services/users.service';
 import { TimePolicyService } from '../../users/services/time-policy.service';
 import { ConfigService } from '../../config/services/config.service';
@@ -26,7 +26,7 @@ export class SessionTerminationService {
     private sessionHistoryRepository: Repository<SessionHistory>,
     @InjectRepository(UserPreference)
     private userPreferenceRepository: Repository<UserPreference>,
-    private plexClient: PlexClient,
+    private mediaServerFactory: MediaServerFactory,
     private usersService: UsersService,
     private timePolicyService: TimePolicyService,
     @Inject(forwardRef(() => ConfigService))
@@ -409,7 +409,8 @@ export class SessionTerminationService {
         `Terminating session ${sessionKey} with reason: ${reason}`,
       );
 
-      await this.plexClient.terminateSession(sessionKey, reason);
+      const mediaServerClient = await this.mediaServerFactory.createClient();
+      await mediaServerClient.terminateSession(sessionKey, reason);
       this.logger.log(`Successfully terminated session ${sessionKey}`);
     } catch (error) {
       this.logger.error(`Failed to terminate session ${sessionKey}`, error);
