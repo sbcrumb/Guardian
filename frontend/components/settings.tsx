@@ -225,7 +225,7 @@ export default function Settings({ onBack }: SettingsProps) {
       }
 
       updateSettings(
-        changedSettings.map((setting) => ({
+        allSettingsToSave.map((setting) => ({
           key: setting.key,
           value: setting.value,
         }))
@@ -233,7 +233,7 @@ export default function Settings({ onBack }: SettingsProps) {
 
       toast({
         title: "Settings Saved",
-        description: `Successfully updated ${changedSettings.length} setting(s).`,
+        description: `Successfully updated ${allSettingsToSave.length} setting(s).`,
         variant: "success",
       });
 
