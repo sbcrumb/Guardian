@@ -174,9 +174,8 @@ export function MediaServerSettings({
 
       if (result.success) {
         setConnectionStatus({
-          isConnected: true,
+          success: true,
           message: result.message,
-          details: result.suggestion,
         });
         toast({
           title: "Connection Successful",
@@ -184,10 +183,8 @@ export function MediaServerSettings({
         });
       } else {
         setConnectionStatus({
-          isConnected: false,
-          message: result.message,
-          details: result.suggestion,
-          errorCode: result.code,
+          success: false,
+          message: result.suggestion ? `${result.message} - ${result.suggestion}` : result.message,
         });
         toast({
           title: "Connection Failed",
@@ -198,7 +195,7 @@ export function MediaServerSettings({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       setConnectionStatus({
-        isConnected: false,
+        success: false,
         message: errorMessage,
       });
       toast({
@@ -214,23 +211,21 @@ export function MediaServerSettings({
   const renderConnectionStatus = () => {
     if (!connectionStatus) return null;
 
-    const { isConnected, message, details, errorCode } = connectionStatus;
+    const { success, message } = connectionStatus;
 
     return (
       <div className={`flex items-start gap-2 p-3 rounded-md border ${
-        isConnected 
+        success 
           ? "bg-green-50 border-green-200 text-green-800" 
           : "bg-red-50 border-red-200 text-red-800"
       }`}>
-        {isConnected ? (
+        {success ? (
           <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
         ) : (
           <XCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
         )}
         <div className="flex-1 min-w-0">
           <p className="font-medium">{message}</p>
-          {details && <p className="text-sm mt-1">{details}</p>}
-          {errorCode && <p className="text-xs mt-1 font-mono">Error Code: {errorCode}</p>}
         </div>
       </div>
     );
