@@ -276,7 +276,7 @@ export function MediaServerSettings({
             id={`server-ip-${serverType}`}
             type="text"
             placeholder="192.168.1.100"
-            value={formData[settingKeys.ip] ?? settings.find(s => s.key === settingKeys.ip)?.value ?? ""}
+            value={String(formData[settingKeys.ip] ?? settings.find(s => s.key === settingKeys.ip)?.value ?? "")}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.ip]: e.target.value,
@@ -292,7 +292,7 @@ export function MediaServerSettings({
             id={`server-port-${serverType}`}
             type="text"
             placeholder={serverType === 'plex' ? '32400' : '8096'}
-            value={formData[settingKeys.port] ?? settings.find(s => s.key === settingKeys.port)?.value ?? ""}
+            value={String(formData[settingKeys.port] ?? settings.find(s => s.key === settingKeys.port)?.value ?? "")}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.port]: e.target.value,
@@ -308,7 +308,7 @@ export function MediaServerSettings({
             id={`server-token-${serverType}`}
             type="password"
             placeholder={getTokenPlaceholder(serverType)}
-            value={formData[settingKeys.token] ?? settings.find(s => s.key === settingKeys.token)?.value ?? ""}
+            value={String(formData[settingKeys.token] ?? settings.find(s => s.key === settingKeys.token)?.value ?? "")}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.token]: e.target.value,
@@ -363,7 +363,7 @@ export function MediaServerSettings({
             id={`custom-url-${serverType}`}
             type="url"
             placeholder={`https://your${serverType}server.example.com`}
-            value={formData[settingKeys.customUrl] ?? settings.find(s => s.key === settingKeys.customUrl)?.value ?? ""}
+            value={String(formData[settingKeys.customUrl] ?? settings.find(s => s.key === settingKeys.customUrl)?.value ?? "")}
             onChange={(e) =>
               onFormDataChange({
                 [settingKeys.customUrl]: e.target.value,
