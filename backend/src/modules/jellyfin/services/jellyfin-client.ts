@@ -30,7 +30,6 @@ export class JellyfinClient implements IMediaServerClient {
       this.configService.getSetting('IGNORE_CERT_ERRORS'),
     ]);
 
-    this.logger.debug(`Raw config values: ip=${ip}, port=${port}, token=${token ? '[REDACTED]' : 'null'}, useSSL=${useSSL}, ignoreCertErrors=${ignoreCertErrors}`);
 
     return {
       ip: ip as string,
@@ -63,7 +62,6 @@ export class JellyfinClient implements IMediaServerClient {
     const { ip, port, token, useSSL, ignoreCertErrors } = await this.getConfig();
     const baseUrl = `${useSSL ? 'https' : 'http'}://${ip}:${port}`;
     
-    this.logger.debug(`Request config: ip=${ip}, port=${port}, useSSL=${useSSL}, baseUrl=${baseUrl}`);
 
     return new Promise((resolve, reject) => {
       const cleanEndpoint = endpoint.startsWith('/')
@@ -330,6 +328,26 @@ export class JellyfinClient implements IMediaServerClient {
       }
     } catch (error) {
       this.logger.error('Connection test failed:', error);
+
+      // Handle timeout errors
+      if (error.message && error.message.includes('Request timeout')) {
+        return {
+          success: false,
+          message: 'Connection timeout: Jellyfin server is not responding',
+          code: 'CONNECTION_TIMEOUT',
+          suggestion: 'Check if Jellyfin is running and accessible at the configured address',
+        };
+      }
+
+      // Handle connection reset/refused errors  
+      if (error.code === 'ECONNRESET' || error.code === 'ECONNREFUSED') {
+        return {
+          success: false,
+          message: 'Connection refused: Unable to connect to Jellyfin server',
+          code: 'CONNECTION_REFUSED',
+          suggestion: 'Verify the IP address, port, and that Jellyfin is running',
+        };
+      }
 
       // Handle specific SSL/TLS errors
       if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
