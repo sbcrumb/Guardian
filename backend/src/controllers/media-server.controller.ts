@@ -144,13 +144,23 @@ export class MediaServerController {
   @Get('info')
   async getServerInfo() {
     try {
-      const [serverType, config, client] = await Promise.all([
+      const [serverType, config] = await Promise.all([
         this.mediaServerFactory.getServerType(),
         this.mediaServerFactory.getMediaServerConfig(),
-        this.mediaServerFactory.createClient(),
       ]);
 
-      const serverId = await client.getServerIdentity();
+      let serverId = null;
+      
+      // Only try to get server identity if the server is configured
+      if (config.serverIp && config.serverPort && config.token) {
+        try {
+          const client = await this.mediaServerFactory.createClient();
+          serverId = await client.getServerIdentity();
+        } catch (error) {
+          this.logger.debug(`Failed to get server identity: ${error.message}`);
+          // Don't throw here, just return null serverId
+        }
+      }
 
       return {
         serverType,

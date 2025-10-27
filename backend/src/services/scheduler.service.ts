@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
-import { PlexService } from '../modules/plex/services/plex.service';
+import { MediaServerFactory } from '../factories/media-server.factory';
 import { ConfigService } from '../modules/config/services/config.service';
 import { DeviceTrackingService } from '../modules/devices/services/device-tracking.service';
 import { UsersService } from '../modules/users/services/users.service';
@@ -12,7 +12,7 @@ export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
 
   constructor(
-    private readonly plexService: PlexService,
+    private readonly mediaServerFactory: MediaServerFactory,
     @Inject(forwardRef(() => ConfigService))
     private readonly configService: ConfigService,
     private readonly deviceTrackingService: DeviceTrackingService,
@@ -38,7 +38,7 @@ export class SchedulerService implements OnModuleInit {
     // Perform tasks on startup
     await this.handleSessionUpdates();
     await this.performDeviceCleanup();
-    await this.syncPlexUsers();
+    await this.syncMediaServerUsers();
   }
 
   private async setupDynamicSessionUpdatesCron() {
@@ -104,22 +104,20 @@ export class SchedulerService implements OnModuleInit {
 
   private async handleSessionUpdates() {
     try {
-      // Check if Plex is properly configured before attempting to update sessions
-      const [ip, port, token] = await Promise.all([
-        this.configService.getSetting('PLEX_SERVER_IP'),
-        this.configService.getSetting('PLEX_SERVER_PORT'),
-        this.configService.getSetting('PLEX_TOKEN'),
-      ]);
+      // Check if media server is properly configured before attempting to update sessions
+      const serverType = await this.mediaServerFactory.getServerType();
+      const config = await this.mediaServerFactory.getMediaServerConfig();
 
-      if (!ip || !port || !token) {
-        this.logger.debug('Skipping session update - Plex not configured');
+      if (!config.serverIp || !config.serverPort || !config.token) {
+        this.logger.debug(`Skipping session update - ${serverType} not configured`);
         return;
       }
 
-      await this.plexService.updateActiveSessions();
+      const service = await this.mediaServerFactory.createService();
+      await service.updateActiveSessions();
     } catch (error) {
       // Only log errors that are not configuration-related
-      if (!error.message.includes('Missing required Plex configuration')) {
+      if (!error.message.includes('Missing required') && !error.message.includes('configuration')) {
         this.logger.error('Error during scheduled session update:', error);
       }
     }
@@ -175,33 +173,40 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
-  // Sync Plex users every hour
+  // Sync media server users every hour
   @Cron('0 0 * * * *', {
-    name: 'syncPlexUsers',
+    name: 'syncMediaServerUsers',
   })
-  async handlePlexUserSync() {
-    await this.syncPlexUsers();
+  async handleMediaServerUserSync() {
+    await this.syncMediaServerUsers();
   }
 
-  private async syncPlexUsers() {
+  private async syncMediaServerUsers() {
     try {
-      // Check if Plex is configured before attempting sync
-      const token = await this.configService.getSetting('PLEX_TOKEN');
+      const serverType = await this.mediaServerFactory.getServerType();
+      const config = await this.mediaServerFactory.getMediaServerConfig();
 
-      if (!token) {
+      if (!config.token) {
         this.logger.debug(
-          'Skipping Plex users sync - Plex token not configured',
+          `Skipping ${serverType} users sync - authentication not configured`,
         );
         return;
       }
 
-      this.logger.log('Syncing Plex Home users from Plex.tv...');
-      const result = await this.usersService.syncUsersFromPlexTV();
-      this.logger.log(
-        `Plex users sync completed: ${result.created} created, ${result.updated} updated, ${result.errors} errors`,
-      );
+      // Currently only Plex supports user sync from external API
+      if (serverType === 'plex') {
+        this.logger.log('Syncing Plex Home users from Plex.tv...');
+        const result = await this.usersService.syncUsersFromPlexTV();
+        this.logger.log(
+          `Plex users sync completed: ${result.created} created, ${result.updated} updated, ${result.errors} errors`,
+        );
+      } else {
+        this.logger.debug(
+          `User sync not implemented for ${serverType} - skipping`,
+        );
+      }
     } catch (error) {
-      this.logger.error('Error during Plex users sync:', error);
+      this.logger.error('Error during media server users sync:', error);
     }
   }
 }

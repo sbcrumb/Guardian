@@ -243,21 +243,29 @@ export function MediaServerSettings({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Server Type Selection (Display Only) */}
+        {/* Server Type Selection */}
         <div className="space-y-2">
           <Label>Media Server Type</Label>
-          <Select value={serverType} disabled>
+          <Select 
+            value={serverType} 
+            onValueChange={(value: MediaServerType) => {
+              setServerType(value);
+              onFormDataChange({
+                MEDIA_SERVER_TYPE: value,
+              });
+            }}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="plex">Plex Media Server</SelectItem>
               <SelectItem value="jellyfin">Jellyfin Server</SelectItem>
-              <SelectItem value="emby">Emby Server</SelectItem>
+              <SelectItem value="emby">Emby Server (Coming Soon)</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-sm text-muted-foreground">
-            Server type is configured via environment variables (MEDIA_SERVER_TYPE).
+            Choose your media server platform. Can also be configured via MEDIA_SERVER_TYPE environment variable.
           </p>
         </div>
 
@@ -373,7 +381,7 @@ export function MediaServerSettings({
             <div>
               <h4 className="font-medium">Test Connection</h4>
               <p className="text-sm text-muted-foreground">
-                Verify that Guardian can connect to your {getServerTypeDisplay(serverType)}
+                Verify that Guardian can connect to your media server
               </p>
             </div>
             <Button

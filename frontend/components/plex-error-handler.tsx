@@ -19,7 +19,7 @@ import {
 import { PlexStatus } from "@/types";
 import { PlexErrorCode, ERROR_DISPLAY_CONFIG } from "@/types/plex-errors";
 
-interface PlexErrorHandlerProps {
+interface MediaServerErrorHandlerProps {
   plexStatus: PlexStatus | null;
   onShowSettings: () => void;
 }
@@ -36,7 +36,7 @@ const ICON_MAP = {
 export function PlexErrorHandler({
   plexStatus,
   onShowSettings,
-}: PlexErrorHandlerProps) {
+}: MediaServerErrorHandlerProps) {
   // Determine the appropriate display configuration based on the error
   const getErrorInfo = () => {
     // Check for backend connection errors FIRST (before checking configured status)
@@ -167,19 +167,19 @@ export function PlexErrorHandler({
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span className="text-sm text-muted-foreground">
-                        Plex Server IP Address
+                        Media Server IP Address
                       </span>
                     </li>
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span className="text-sm text-muted-foreground">
-                        Plex Server Port
+                        Media Server Port
                       </span>
                     </li>
                     <li className="flex items-center space-x-3">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span className="text-sm text-muted-foreground">
-                        Plex Authentication Token
+                        Authentication Token/API Key
                       </span>
                     </li>
                   </ul>

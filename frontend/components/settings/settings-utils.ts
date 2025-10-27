@@ -115,6 +115,26 @@ export const getSettingInfo = (setting: AppSetting): SettingInfo => {
       label: "Custom Plex URL",
       description: "Override the default Plex URL for media links",
     },
+    MEDIA_SERVER_TYPE: {
+      label: "Media Server Type",
+      description: "The type of media server to connect to (plex, jellyfin, emby)",
+    },
+    JELLYFIN_SERVER_IP: {
+      label: "Jellyfin server IP address",
+      description: "IP address or hostname of your Jellyfin Server",
+    },
+    JELLYFIN_SERVER_PORT: {
+      label: "Jellyfin server port",
+      description: "Port number for your Jellyfin Server (default: 8096)",
+    },
+    JELLYFIN_API_KEY: {
+      label: "Jellyfin API key",
+      description: "API key for accessing your Jellyfin Server",
+    },
+    CUSTOM_JELLYFIN_URL: {
+      label: "Custom Jellyfin URL",
+      description: "Override the default Jellyfin URL for media links",
+    },
     TIMEZONE: {
       label: "Timezone",
       description: "Timezone offset for time based restrictions and scheduling",
